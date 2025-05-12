@@ -93,75 +93,106 @@ document.getElementById('tagInput').addEventListener('keydown', handleTagInput);
 
 // Add keyboard shortcuts
 document.addEventListener('keydown', (e) => {
-    console.log('Key pressed:', e.key, 'Alt:', e.altKey, 'Target:', e.target.tagName);
+    console.log('=== Keyboard Event Debug ===');
+    console.log('Key pressed:', e.key);
+    console.log('Alt key:', e.altKey);
+    console.log('Ctrl key:', e.ctrlKey);
+    console.log('Meta key:', e.metaKey);
+    console.log('Target element:', e.target.tagName);
+    console.log('Target class:', e.target.className);
+    console.log('Is in editor:', !!e.target.closest('.ql-editor'));
+    
+    // Special debug for Alt+S
+    if (e.key.toLowerCase() === 's') {
+        console.log('S key pressed - Alt state:', e.altKey);
+        console.log('Event default prevented:', e.defaultPrevented);
+        console.log('Event target:', e.target);
+    }
     
     // Check if we're not in an input field or editor
     if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA' && !e.target.closest('.ql-editor')) {
-        console.log('Processing keyboard shortcut');
+        console.log('Processing keyboard shortcut - not in input/editor');
         
         // Alt + N for new note
         if (e.altKey && e.key.toLowerCase() === 'n') {
-            console.log('Alt+N detected');
+            console.log('Alt+N detected - creating new note');
             e.preventDefault();
-            document.getElementById('newNoteBtn').click();
+            e.stopPropagation();
+            createNewNote();
         }
         // Alt + S for save
         else if (e.altKey && e.key.toLowerCase() === 's') {
-            console.log('Alt+S detected');
+            console.log('Alt+S detected - saving note');
             e.preventDefault();
-            document.getElementById('saveNoteBtn').click();
+            e.stopPropagation();
+            saveNote();
+            return false; // Additional prevention of default behavior
         }
         // Alt + O for open
         else if (e.altKey && e.key.toLowerCase() === 'o') {
-            console.log('Alt+O detected');
+            console.log('Alt+O detected - opening file');
             e.preventDefault();
-            document.getElementById('importBtn').click();
+            e.stopPropagation();
+            importJSON();
         }
         // Alt + F for focus search
         else if (e.altKey && e.key.toLowerCase() === 'f') {
-            console.log('Alt+F detected');
+            console.log('Alt+F detected - focusing search');
             e.preventDefault();
+            e.stopPropagation();
             document.getElementById('searchInput').focus();
         }
         // Alt + G for graph view
         else if (e.altKey && e.key.toLowerCase() === 'g') {
-            console.log('Alt+G detected');
+            console.log('Alt+G detected - switching to graph view');
             e.preventDefault();
-            document.getElementById('graphViewBtn').click();
+            e.stopPropagation();
+            showGraphView();
         }
         // Alt + L for list view
         else if (e.altKey && e.key.toLowerCase() === 'l') {
-            console.log('Alt+L detected');
+            console.log('Alt+L detected - switching to list view');
             e.preventDefault();
-            document.getElementById('listViewBtn').click();
+            e.stopPropagation();
+            showListView();
         }
         // Alt + C for child note
         else if (e.altKey && e.key.toLowerCase() === 'c') {
-            console.log('Alt+C detected');
+            console.log('Alt+C detected - creating child note');
             e.preventDefault();
-            document.getElementById('newChildBtn').click();
+            e.stopPropagation();
+            createChildNote();
         }
         // Alt + P for parent note
         else if (e.altKey && e.key.toLowerCase() === 'p') {
-            console.log('Alt+P detected');
+            console.log('Alt+P detected - creating parent note');
             e.preventDefault();
-            document.getElementById('newParentBtn').click();
+            e.stopPropagation();
+            createParentNote();
         }
         // Alt + I for insert between
         else if (e.altKey && e.key.toLowerCase() === 'i') {
-            console.log('Alt+I detected');
+            console.log('Alt+I detected - inserting note between');
             e.preventDefault();
-            document.getElementById('insertNoteBtn').click();
-        }
-        else if (e.altKey && e.key.toLowerCase() === 'e') {
-            console.log('Alt+E detected');
-            e.preventDefault();
-            document.getElementById('exportBtn').click();
+            e.stopPropagation();
+            insertNoteBetween();
         }
     } else {
         console.log('Ignoring keyboard shortcut - in input field or editor');
     }
+    console.log('=== End Keyboard Event Debug ===');
 });
+
+// Add a second event listener specifically for Alt+S
+document.addEventListener('keydown', (e) => {
+    if (e.altKey && e.key.toLowerCase() === 's') {
+        console.log('Alt+S detected in second listener');
+        e.preventDefault();
+        e.stopPropagation();
+        saveNote();
+        return false;
+    }
+}, true); // Using capture phase
 
 // Add search input keyboard shortcuts
 document.getElementById('searchInput').addEventListener('keydown', (e) => {
