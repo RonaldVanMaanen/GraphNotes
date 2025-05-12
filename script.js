@@ -135,6 +135,12 @@ document.addEventListener('keydown', (e) => {
             e.stopPropagation();
             importJSON();
         }
+        else if (e.altKey && e.key.toLowerCase() === 'e') {
+            console.log('Alt+E detected - Exporting file');
+            e.preventDefault();
+            e.stopPropagation();
+            exportJSON();
+        }
         // Alt + F for focus search
         else if (e.altKey && e.key.toLowerCase() === 'f') {
             console.log('Alt+F detected - focusing search');
@@ -294,13 +300,24 @@ async function importJSON() {
 }
 
 function exportJSON() {
+    // Create a blob with the current notes data
     const blob = new Blob([JSON.stringify(notesData, null, 2)], { type: 'application/json' });
+    
+    // Create a temporary URL for the blob
     const url = URL.createObjectURL(blob);
+    
+    // Create a temporary link element
     const a = document.createElement('a');
     a.href = url;
     a.download = 'notes.json';
+    
+    // Append the link to the document
     document.body.appendChild(a);
+    
+    // Trigger the download
     a.click();
+    
+    // Clean up
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 }
