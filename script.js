@@ -90,6 +90,7 @@ document.getElementById('createLinkBtn').addEventListener('click', createLink);
 document.getElementById('insertNoteBtn').addEventListener('click', insertNoteBetween);
 document.getElementById('searchInput').addEventListener('input', handleSearch);
 document.getElementById('tagInput').addEventListener('keydown', handleTagInput);
+document.getElementById('newJSONBtn').addEventListener('click', createNewJSON);
 
 // Add keyboard shortcuts
 document.addEventListener('keydown', (e) => {
@@ -690,6 +691,44 @@ function handleSearch(event) {
             }
         });
     }
+}
+
+function createNewJSON() {
+    // Prompt for the new JSON file name
+    const fileName = prompt('Enter name for new JSON file (without .json extension):', 'new_notes');
+    
+    if (!fileName) return; // User cancelled
+    
+    // Create new empty notes data structure
+    notesData = {
+        notes: [],
+        links: []
+    };
+    
+    // Create a blob with the new empty data
+    const blob = new Blob([JSON.stringify(notesData, null, 2)], { type: 'application/json' });
+    
+    // Create a temporary URL for the blob
+    const url = URL.createObjectURL(blob);
+    
+    // Create a temporary link element
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${fileName}.json`;
+    
+    // Append the link to the document
+    document.body.appendChild(a);
+    
+    // Trigger the download
+    a.click();
+    
+    // Clean up
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    // Update the network visualization
+    updateNetwork();
+    saveToFile();
 }
 
 // Initialize the application
