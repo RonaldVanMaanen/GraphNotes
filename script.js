@@ -88,6 +88,7 @@ document.getElementById('deleteNoteBtn').addEventListener('click', deleteNote);
 document.getElementById('breakLinkBtn').addEventListener('click', breakLink);
 document.getElementById('createLinkBtn').addEventListener('click', createLink);
 document.getElementById('insertNoteBtn').addEventListener('click', insertNoteBetween);
+document.getElementById('moveLinkBtn').addEventListener('click', moveLink);
 document.getElementById('searchInput').addEventListener('input', handleSearch);
 document.getElementById('tagInput').addEventListener('keydown', handleTagInput);
 document.getElementById('newJSONBtn').addEventListener('click', createNewJSON);
@@ -587,6 +588,105 @@ function insertNoteBetween() {
     selectedNodeId = newNoteId;
     network.selectNodes([newNoteId]);
     updateButtonStates();
+}
+
+function moveLink() {
+    if (!selectedNodeId) {
+        alert('Please select a note first');
+        return;
+    }
+
+    // Find all links connected to the selected note
+    const connectedLinks = notesData.links.filter(link => 
+        link.from === selectedNodeId || link.to === selectedNodeId
+    );
+
+    if (connectedLinks.length === 0) {
+        alert('No links to move for this note');
+        return;
+    }
+
+    // Create a more user-friendly display of links
+    const linkOptions = connectedLinks.map((link, index) => {
+        const fromNote = notesData.notes.find(n => n.id === link.from);
+        const toNote = notesData.notes.find(n => n.id === link.to);
+        const direction = link.from === selectedNodeId ? '→' : '←';
+        const otherNote = link.from === selectedNodeId ? toNote : fromNote;
+        return `${index + 1}. ${direction} ${otherNote.title}`;
+    });
+
+    // Show the links in a more readable format
+    const message = `Select the link to move (enter number):\n\n` +
+                   `Current note: ${notesData.notes.find(n => n.id === selectedNodeId).title}\n\n` +
+                   `Connected links:\n${linkOptions.join('\n')}`;
+
+    const choice = prompt(message, '1');
+
+    if (choice === null) return; // User cancelled
+
+    const index = parseInt(choice) - 1;
+    if (isNaN(index) || index < 0 || index >= connectedLinks.length) {
+        alert('Invalid selection. Please enter a number between 1 and ' + connectedLinks.length);
+        return;
+    }
+
+    // Get the link to move
+    const linkToMove = connectedLinks[index];
+    const isFromNote = linkToMove.from === selectedNodeId;
+    const otherNoteId = isFromNote ? linkToMove.to : linkToMove.from;
+
+    // Get all available notes for the new target
+    const availableNotes = notesData.notes.filter(note => 
+        note.id !== selectedNodeId && 
+        note.id !== otherNoteId &&
+        !notesData.links.some(link => 
+            (link.from === selectedNodeId && link.to === note.id) || 
+            (link.from === note.id && link.to === selectedNodeId)
+        )
+    );
+
+    // Create a list of available notes
+    const noteOptions = availableNotes.map((note, index) => {
+        return `${index + 1}. ${note.title} (ID: ${note.id})`;
+    });
+
+    // Show the available notes in a more readable format
+    const newTargetMessage = `Enter the number of the new target note:\n\n` +
+                           `Available notes:\n${noteOptions.join('\n')}`;
+
+    const noteChoice = prompt(newTargetMessage);
+
+    if (noteChoice === null) return; // User cancelled
+
+    const noteIndex = parseInt(noteChoice) - 1;
+    if (isNaN(noteIndex) || noteIndex < 0 || noteIndex >= availableNotes.length) {
+        alert('Invalid selection. Please enter a number between 1 and ' + availableNotes.length);
+        return;
+    }
+
+    // Get the new target note
+    const newTargetNote = availableNotes[noteIndex];
+    const newTargetId = newTargetNote.id;
+
+    // Remove the old link
+    notesData.links = notesData.links.filter(l => 
+        !(l.from === linkToMove.from && l.to === linkToMove.to)
+    );
+
+    // Create the new link
+    notesData.links.push({
+        from: isFromNote ? selectedNodeId : newTargetId,
+        to: isFromNote ? newTargetId : selectedNodeId
+    });
+
+    // Update the network visualization
+    updateNetwork();
+    saveToFile();
+
+    // Show confirmation
+    const fromNote = notesData.notes.find(n => n.id === (isFromNote ? selectedNodeId : newTargetId));
+    const toNote = notesData.notes.find(n => n.id === (isFromNote ? newTargetId : selectedNodeId));
+    alert(`Link moved to:\n${fromNote.title} → ${toNote.title}`);
 }
 
 async function saveToFile() {

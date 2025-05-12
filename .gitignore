@@ -2,4 +2,3 @@
 *.json
 
 # But keep the default notes.json as an example
-!notes.json 
