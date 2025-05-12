@@ -1,0 +1,135 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.top-row {
+    padding: 10px;
+    background-color: #f0f0f0;
+    border-bottom: 1px solid #ccc;
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+button {
+    padding: 8px 16px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+button:hover:not(:disabled) {
+    background-color: #45a049;
+}
+
+.search-container {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    width: 100%;
+    align-items: flex-start;
+}
+
+#filePath {
+    width: 30%;
+}
+
+#searchInput {
+    width: 35%;
+}
+
+#tagContainer {
+    width: 35%;
+}
+
+#tagInput {
+    width: 100%;
+}
+
+#filePath, #searchInput, #tagInput {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+#tagContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+#currentTags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding-top: 4px;
+}
+
+.tag {
+    background-color: #e0e0e0;
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.tag .remove-tag {
+    cursor: pointer;
+    color: #666;
+}
+
+.tag .remove-tag:hover {
+    color: #ff0000;
+}
+
+.highlight {
+    background-color: #ffeb3b;
+}
+
+.main-content {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+
+#graph-container {
+    width: 50%;
+    height: 100%;
+    border-right: 1px solid #ccc;
+    overflow: auto;
+}
+
+#editor-container {
+    width: 50%;
+    height: 100%;
+    overflow: auto;
+}
+
+#editor {
+    height: 100%;
+}
+
+.ql-container {
+    height: calc(100% - 42px) !important;
+} 

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graph Notes</title>
+    <link rel="stylesheet" href="styles.css">
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+</head>
+<body>
+    <div class="top-row">
+        <div class="button-group">
+            <button id="importBtn" title="Alt + O">Import</button>
+            <button id="exportBtn" title="Alt + S">Export</button>
+            <button id="newNoteBtn" title="Alt + N">New Note</button>
+            <button id="newChildBtn" title="Alt + C">Child Note</button>
+            <button id="newParentBtn" title="Alt + P">Parent Note</button>
+            <button id="saveNoteBtn" title="Alt + S">Save</button>
+            <button id="deleteNoteBtn" title="Delete">Delete</button>
+            <button id="breakLinkBtn" title="Break">Break Link</button>
+            <button id="createLinkBtn" title="Alt + L">Create Link</button>
+            <button id="insertNoteBtn" title="Alt + I">Insert Between</button>
+        </div>
+        <div class="search-container">
+            <input type="text" id="filePath" readonly placeholder="No file selected">
+            <input type="text" id="searchInput" placeholder="Search notes..." title="Alt + F, Enter to search, Esc to clear">
+            <div id="tagContainer">
+                <input type="text" id="tagInput" placeholder="Add tags (comma separated)" title="Enter or , to add tag">
+                <div id="currentTags"></div>
+            </div>
+        </div>
+        <div class="view-toggle">
+            <button id="graphViewBtn" title="Alt + G">Graph View</button>
+            <button id="listViewBtn" title="Alt + L">List View</button>
+        </div>
+    </div>
+    
+    <div class="main-content">
+        <div id="graph-container"></div>
+        <div id="editor-container">
+            <div id="editor"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 
