@@ -153,6 +153,11 @@ document.addEventListener('keydown', (e) => {
             e.preventDefault();
             document.getElementById('insertNoteBtn').click();
         }
+        else if (e.altKey && e.key.toLowerCase() === 'e') {
+            console.log('Alt+E detected');
+            e.preventDefault();
+            document.getElementById('exportBtn').click();
+        }
     } else {
         console.log('Ignoring keyboard shortcut - in input field or editor');
     }
