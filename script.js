@@ -83,6 +83,7 @@ document.getElementById('exportBtn').addEventListener('click', exportJSON);
 document.getElementById('newNoteBtn').addEventListener('click', createNewNote);
 document.getElementById('newChildBtn').addEventListener('click', createChildNote);
 document.getElementById('newParentBtn').addEventListener('click', createParentNote);
+document.getElementById('renameNoteBtn').addEventListener('click', renameNote);
 document.getElementById('saveNoteBtn').addEventListener('click', saveNote);
 document.getElementById('deleteNoteBtn').addEventListener('click', deleteNote);
 document.getElementById('breakLinkBtn').addEventListener('click', breakLink);
@@ -400,6 +401,40 @@ function createParentNote() {
     network.selectNodes([id]);
     updateButtonStates();
     saveToFile();
+}
+
+function renameNote() {
+    if (!selectedNodeId) {
+        alert('Please select a note first');
+        return;
+    }
+
+    const note = notesData.notes.find(n => n.id === selectedNodeId);
+    if (!note) {
+        alert('Selected note not found');
+        return;
+    }
+
+    // Prompt for the new title
+    const newTitle = prompt('Enter new title for the note:', note.title);
+    
+    if (!newTitle) return; // User cancelled
+    
+    // Update the note title
+    note.title = newTitle.trim();
+    
+    // Update the network visualization
+    nodes.update({
+        id: note.id,
+        label: note.title,
+        title: note.title
+    });
+    
+    // Save changes
+    saveToFile();
+    
+    // Show confirmation
+    alert(`Note renamed to: ${note.title}`);
 }
 
 function saveNote() {
