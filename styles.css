@@ -133,4 +133,16 @@ button:hover:not(:disabled) {
 
 .ql-container {
     height: calc(100% - 42px) !important;
+}
+
+/* Make cursor white in Quill editor */
+.ql-editor {
+    caret-color: black;
+    cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'><circle cx='5' cy='5' r='4' fill='black' /></svg>") 5 5, auto;
+
+}
+
+/* Make text white in Quill editor */
+.ql-editor p {
+    color: black;
 } 

@@ -68,11 +68,43 @@ network.on('select', function(params) {
     selectedNodeId = params.nodes[0];
     selectedNodes = params.nodes;
     updateButtonStates();
-    if (selectedNodeId) {
+    
+    // If it's a single selection, highlight connected nodes
+    if (selectedNodes.length === 1) {
+        highlightConnectedNodes(selectedNodeId);
         const note = notesData.notes.find(n => n.id === selectedNodeId);
         if (note) {
             quill.root.innerHTML = note.text;
             updateTagsDisplay();
+        }
+    } else {
+        // Reset all nodes to default color if no single selection
+        nodes.forEach(node => {
+            nodes.update({
+                id: node.id,
+                color: {
+                    background: '#4CAF50',
+                    border: '#388E3C'
+                }
+            });
+        });
+    }
+});
+
+// Add click event handler for nodes
+network.on('click', function(params) {
+    if (params.nodes.length > 0) {
+        const clickedNodeId = params.nodes[0];
+        const note = notesData.notes.find(n => n.id === clickedNodeId);
+        if (note) {
+            // Only update content if this is a single selection
+            if (selectedNodes.length === 1 && selectedNodes[0] === clickedNodeId) {
+                selectedNodeId = clickedNodeId;
+                quill.root.innerHTML = note.text;
+                updateTagsDisplay();
+            }
+            // Don't update selectedNodes here - let the select event handle it
+            updateButtonStates();
         }
     }
 });
@@ -150,20 +182,6 @@ document.addEventListener('keydown', (e) => {
             e.preventDefault();
             e.stopPropagation();
             document.getElementById('searchInput').focus();
-        }
-        // Alt + G for graph view
-        else if (e.altKey && e.key.toLowerCase() === 'g') {
-            console.log('Alt+G detected - switching to graph view');
-            e.preventDefault();
-            e.stopPropagation();
-            showGraphView();
-        }
-        // Alt + L for list view
-        else if (e.altKey && e.key.toLowerCase() === 'l') {
-            console.log('Alt+L detected - switching to list view');
-            e.preventDefault();
-            e.stopPropagation();
-            showListView();
         }
         // Alt + C for child note
         else if (e.altKey && e.key.toLowerCase() === 'c') {
@@ -272,11 +290,16 @@ function updateNetwork() {
 function updateButtonStates() {
     const hasSelection = selectedNodeId !== null;
     const hasMultipleSelection = selectedNodes.length >= 2;
-    document.getElementById('newChildBtn').disabled = !hasSelection;
-    document.getElementById('newParentBtn').disabled = !hasSelection;
-    document.getElementById('saveNoteBtn').disabled = !hasSelection;
-    document.getElementById('deleteNoteBtn').disabled = !hasSelection;
-    document.getElementById('breakLinkBtn').disabled = !hasSelection;
+    const hasSingleSelection = selectedNodes.length === 1;
+    
+    // Single selection buttons
+    document.getElementById('newChildBtn').disabled = !hasSingleSelection;
+    document.getElementById('newParentBtn').disabled = !hasSingleSelection;
+    document.getElementById('saveNoteBtn').disabled = !hasSingleSelection;
+    document.getElementById('deleteNoteBtn').disabled = !hasSingleSelection;
+    document.getElementById('breakLinkBtn').disabled = !hasSingleSelection;
+    
+    // Multi-selection buttons
     document.getElementById('createLinkBtn').disabled = !hasMultipleSelection;
     document.getElementById('insertNoteBtn').disabled = !hasMultipleSelection;
 }
@@ -330,6 +353,70 @@ function promptForTitle(defaultTitle = '') {
     return title ? title.trim() : 'Untitled';
 }
 
+// Helper function to highlight connected nodes
+function highlightConnectedNodes(nodeId) {
+    // Reset all nodes to default color
+    nodes.forEach(node => {
+        nodes.update({
+            id: node.id,
+            color: {
+                background: '#4CAF50',
+                border: '#388E3C'
+            }
+        });
+    });
+
+    // Find all connected nodes
+    const connectedNodes = new Set();
+    notesData.links.forEach(link => {
+        if (link.from === nodeId) {
+            connectedNodes.add(link.to);
+        }
+        if (link.to === nodeId) {
+            connectedNodes.add(link.from);
+        }
+    });
+
+    // Highlight connected nodes in blue
+    connectedNodes.forEach(connectedId => {
+        nodes.update({
+            id: connectedId,
+            color: {
+                background: '#2196F3',
+                border: '#1976D2'
+            }
+        });
+    });
+
+    // Highlight the selected node in yellow
+    nodes.update({
+        id: nodeId,
+        color: {
+            background: '#ffeb3b',
+            border: '#fbc02d'
+        }
+    });
+}
+
+// Update the autoSelectNode function to also highlight connected nodes
+function autoSelectNode(nodeId) {
+    selectedNodeId = nodeId;
+    network.selectNodes([nodeId]);
+    updateButtonStates();
+    
+    // Center the view on the new node
+    network.focus(nodeId, {
+        scale: 1,
+        animation: {
+            duration: 500,
+            easingFunction: 'easeInOutQuad'
+        }
+    });
+    
+    // Highlight connected nodes
+    highlightConnectedNodes(nodeId);
+}
+
 function createNewNote() {
     const title = promptForTitle('New Note');
     const id = Date.now().toString();
@@ -347,9 +434,8 @@ function createNewNote() {
         title: note.title
     });
     
-    selectedNodeId = id;
-    network.selectNodes([id]);
-    updateButtonStates();
+    // Use the new auto-select helper
+    setTimeout(() => autoSelectNode(id), 100);
     saveToFile();
 }
 
@@ -372,9 +458,12 @@ function createChildNote() {
     });
     
     updateNetwork();
-    selectedNodeId = id;
-    network.selectNodes([id]);
-    updateButtonStates();
+    // Use the new auto-select helper and load content
+    setTimeout(() => {
+        autoSelectNode(id);
+        quill.root.innerHTML = note.text;
+        updateTagsDisplay();
+    }, 100);
     saveToFile();
 }
 
@@ -397,9 +486,12 @@ function createParentNote() {
     });
     
     updateNetwork();
-    selectedNodeId = id;
-    network.selectNodes([id]);
-    updateButtonStates();
+    // Use the new auto-select helper and load content
+    setTimeout(() => {
+        autoSelectNode(id);
+        quill.root.innerHTML = note.text;
+        updateTagsDisplay();
+    }, 100);
     saveToFile();
 }
 
@@ -617,12 +709,13 @@ function insertNoteBetween() {
 
     // Update the network visualization
     updateNetwork();
+    // Use the new auto-select helper and load content
+    setTimeout(() => {
+        autoSelectNode(newNoteId);
+        quill.root.innerHTML = newNote.text;
+        updateTagsDisplay();
+    }, 100);
     saveToFile();
-
-    // Select the new note
-    selectedNodeId = newNoteId;
-    network.selectNodes([newNoteId]);
-    updateButtonStates();
 }
 
 function moveLink() {
@@ -867,4 +960,4 @@ function createNewJSON() {
 }
 
 // Initialize the application
-initializeData(); 
+initializeData();
