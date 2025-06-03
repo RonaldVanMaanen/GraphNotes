@@ -20,6 +20,33 @@ const quill = new Quill('#editor', {
     }
 });
 
+// Tab switching functionality
+document.querySelectorAll('.tab-button').forEach(button => {
+    button.addEventListener('click', () => {
+        // Remove active class from all buttons and panes
+        document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+        
+        // Add active class to clicked button and corresponding pane
+        button.classList.add('active');
+        const tabId = button.getAttribute('data-tab');
+        document.getElementById(`${tabId}-container`).classList.add('active');
+        
+        // If switching to graph tab, redraw the network
+        if (tabId === 'graph' && network) {
+            network.redraw();
+        }
+        // If switching to editor tab and we have a selected note, update the editor content
+        else if (tabId === 'editor' && selectedNodeId) {
+            const note = notesData.notes.find(n => n.id === selectedNodeId);
+            if (note) {
+                quill.root.innerHTML = note.text;
+                updateTagsDisplay();
+            }
+        }
+    });
+});
+
 // Initialize vis.js network
 let network = null;
 let nodes = new vis.DataSet([]);
@@ -31,6 +58,7 @@ let notesData = {
     links: []
 };
 let currentTags = new Set();
+let lastUsedFilePath = localStorage.getItem('lastUsedFilePath') || 'notes.json';
 
 // Create network
 const container = document.getElementById('graph-container');
@@ -88,6 +116,29 @@ network.on('select', function(params) {
                 }
             });
         });
+    }
+});
+
+// Add double-click event handler for nodes
+network.on('doubleClick', function(params) {
+    if (params.nodes.length > 0) {
+        const clickedNodeId = params.nodes[0];
+        const note = notesData.notes.find(n => n.id === clickedNodeId);
+        if (note) {
+            // Switch to editor tab
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+            
+            const editorTab = document.querySelector('.tab-button[data-tab="editor"]');
+            const editorPane = document.getElementById('editor-container');
+            
+            editorTab.classList.add('active');
+            editorPane.classList.add('active');
+            
+            // Update editor content
+            quill.root.innerHTML = note.text;
+            updateTagsDisplay();
+        }
     }
 });
 
@@ -244,85 +295,102 @@ document.getElementById('tagInput').addEventListener('keydown', (e) => {
     }
 });
 
-// Initialize or load data
-async function initializeData() {
+// Add a function to store only essential data
+function storeEssentialData() {
     try {
-        const response = await fetch('notes.json');
-        if (response.ok) {
-            notesData = await response.json();
-            updateNetwork();
-        } else {
-            createDefaultJSON();
-        }
+        // Store only the structure without the full text content
+        const essentialData = {
+            notes: notesData.notes.map(note => ({
+                id: note.id,
+                title: note.title,
+                tags: note.tags || []
+            })),
+            links: notesData.links
+        };
+        localStorage.setItem('notesData', JSON.stringify(essentialData));
+        localStorage.setItem('lastUsedFilePath', lastUsedFilePath);
     } catch (error) {
-        createDefaultJSON();
+        console.warn('Could not store data in localStorage:', error);
     }
 }
 
-function createDefaultJSON() {
-    notesData = {
-        notes: [],
-        links: []
-    };
-    saveToFile();
-}
-
-function updateNetwork() {
-    nodes.clear();
-    edges.clear();
-    
-    notesData.notes.forEach(note => {
-        nodes.add({
-            id: note.id,
-            label: note.title,
-            title: note.title
-        });
-    });
-    
-    notesData.links.forEach(link => {
-        edges.add({
-            from: link.from,
-            to: link.to
-        });
-    });
-}
-
-function updateButtonStates() {
-    const hasSelection = selectedNodeId !== null;
-    const hasMultipleSelection = selectedNodes.length >= 2;
-    const hasSingleSelection = selectedNodes.length === 1;
-    
-    // Single selection buttons
-    document.getElementById('newChildBtn').disabled = !hasSingleSelection;
-    document.getElementById('newParentBtn').disabled = !hasSingleSelection;
-    document.getElementById('saveNoteBtn').disabled = !hasSingleSelection;
-    document.getElementById('deleteNoteBtn').disabled = !hasSingleSelection;
-    document.getElementById('breakLinkBtn').disabled = !hasSingleSelection;
-    
-    // Multi-selection buttons
-    document.getElementById('createLinkBtn').disabled = !hasMultipleSelection;
-    document.getElementById('insertNoteBtn').disabled = !hasMultipleSelection;
-}
-
 async function importJSON() {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    
-    input.onchange = async (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                notesData = JSON.parse(event.target.result);
+    try {
+        // Try to use the File System Access API first
+        if ('showOpenFilePicker' in window) {
+            try {
+                const [handle] = await window.showOpenFilePicker({
+                    types: [{
+                        description: 'JSON Files',
+                        accept: { 'application/json': ['.json'] },
+                    }],
+                });
+                
+                const file = await handle.getFile();
+                const content = await file.text();
+                try {
+                    notesData = JSON.parse(content);
+                    console.log('Successfully parsed JSON:', notesData);
+                } catch (parseError) {
+                    console.error('JSON Parse Error:', parseError);
+                    console.log('Invalid JSON content:', content);
+                    alert(`Error parsing JSON: ${parseError.message}`);
+                    return;
+                }
+                
+                // Update the file path display and storage
+                lastUsedFilePath = file.name;
                 document.getElementById('filePath').value = file.name;
+                storeEssentialData();
                 updateNetwork();
-            };
-            reader.readAsText(file);
+                return;
+            } catch (err) {
+                if (err.name === 'AbortError') {
+                    console.log('Import cancelled by user');
+                    return;
+                }
+                console.log('File System Access API failed, falling back to input:', err);
+            }
         }
-    };
-    
-    input.click();
+        
+        // Fallback to traditional file input
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        
+        input.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                try {
+                    const content = await file.text();
+                    console.log('File content:', content);
+                    try {
+                        notesData = JSON.parse(content);
+                        console.log('Successfully parsed JSON:', notesData);
+                    } catch (parseError) {
+                        console.error('JSON Parse Error:', parseError);
+                        console.log('Invalid JSON content:', content);
+                        alert(`Error parsing JSON: ${parseError.message}`);
+                        return;
+                    }
+                    
+                    lastUsedFilePath = file.name;
+                    document.getElementById('filePath').value = file.name;
+                    storeEssentialData();
+                    updateNetwork();
+                } catch (error) {
+                    console.error('Error reading file:', error);
+                    alert('Error reading file. Please try again.');
+                }
+            }
+        };
+        
+        // Trigger the file input click
+        input.click();
+    } catch (error) {
+        console.error('Error importing file:', error);
+        alert('Error importing file. Please try again.');
+    }
 }
 
 function exportJSON() {
@@ -534,14 +602,18 @@ function saveNote() {
     
     const note = notesData.notes.find(n => n.id === selectedNodeId);
     if (note) {
-        const newTitle = promptForTitle(note.title);
-        note.title = newTitle;
+        // Only prompt for title if it's empty
+        if (!note.title) {
+            const newTitle = promptForTitle('Untitled');
+            note.title = newTitle;
+            nodes.update({
+                id: note.id,
+                label: note.title,
+                title: note.title
+            });
+        }
+        // Always save the current editor content
         note.text = quill.root.innerHTML;
-        nodes.update({
-            id: note.id,
-            label: note.title,
-            title: note.title
-        });
         saveToFile();
     }
 }
@@ -819,19 +891,55 @@ function moveLink() {
 
 async function saveToFile() {
     try {
-        const response = await fetch('notes.json', {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(notesData, null, 2)
-        });
+        // Store essential data in localStorage
+        storeEssentialData();
         
-        if (!response.ok) {
-            console.error('Failed to save file');
+        // Try to use the File System Access API first
+        if ('showSaveFilePicker' in window) {
+            try {
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: lastUsedFilePath,
+                    types: [{
+                        description: 'JSON Files',
+                        accept: { 'application/json': ['.json'] },
+                    }],
+                });
+                
+                const writable = await handle.createWritable();
+                await writable.write(JSON.stringify(notesData, null, 2));
+                await writable.close();
+                
+                // Update the file path display and storage
+                lastUsedFilePath = handle.name;
+                document.getElementById('filePath').value = handle.name;
+                console.log('File saved successfully');
+                return;
+            } catch (err) {
+                if (err.name === 'AbortError') {
+                    console.log('Save cancelled by user');
+                    return;
+                }
+                console.log('File System Access API failed, falling back to download:', err);
+            }
         }
+        
+        // Fallback to file download
+        const blob = new Blob([JSON.stringify(notesData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = lastUsedFilePath;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        // Update the file path display
+        document.getElementById('filePath').value = lastUsedFilePath;
+        console.log('File downloaded successfully');
     } catch (error) {
         console.error('Error saving file:', error);
+        alert('Error saving changes. Please try again.');
     }
 }
 
@@ -933,6 +1041,10 @@ function createNewJSON() {
         links: []
     };
     
+    // Update the last used file path
+    lastUsedFilePath = `${fileName}.json`;
+    localStorage.setItem('lastUsedFilePath', lastUsedFilePath);
+    
     // Create a blob with the new empty data
     const blob = new Blob([JSON.stringify(notesData, null, 2)], { type: 'application/json' });
     
@@ -942,7 +1054,7 @@ function createNewJSON() {
     // Create a temporary link element
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${fileName}.json`;
+    a.download = lastUsedFilePath;
     
     // Append the link to the document
     document.body.appendChild(a);
@@ -954,9 +1066,86 @@ function createNewJSON() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
-    // Update the network visualization
+    // Update the network visualization and file path display
     updateNetwork();
+    document.getElementById('filePath').value = lastUsedFilePath;
     saveToFile();
+}
+
+// Modify initializeData to handle the essential data
+async function initializeData() {
+    try {
+        // Try to load from localStorage first
+        const savedData = localStorage.getItem('notesData');
+        if (savedData) {
+            const essentialData = JSON.parse(savedData);
+            // Initialize with empty text content
+            notesData = {
+                notes: essentialData.notes.map(note => ({
+                    ...note,
+                    text: ''
+                })),
+                links: essentialData.links
+            };
+            lastUsedFilePath = localStorage.getItem('lastUsedFilePath') || 'notes.json';
+            document.getElementById('filePath').value = lastUsedFilePath;
+            updateNetwork();
+            return;
+        }
+
+        // If no saved data, create default
+        createDefaultJSON();
+    } catch (error) {
+        console.error('Error initializing data:', error);
+        createDefaultJSON();
+    }
+}
+
+function createDefaultJSON() {
+    notesData = {
+        notes: [],
+        links: []
+    };
+    // Save to localStorage instead of file
+    localStorage.setItem('notesData', JSON.stringify(notesData));
+    updateNetwork();
+}
+
+function updateNetwork() {
+    nodes.clear();
+    edges.clear();
+    
+    notesData.notes.forEach(note => {
+        nodes.add({
+            id: note.id,
+            label: note.title,
+            title: note.title
+        });
+    });
+    
+    notesData.links.forEach(link => {
+        edges.add({
+            from: link.from,
+            to: link.to
+        });
+    });
+}
+
+function updateButtonStates() {
+    const hasSelection = selectedNodeId !== null;
+    const hasMultipleSelection = selectedNodes.length >= 2;
+    const hasSingleSelection = selectedNodes.length === 1;
+    
+    // Single selection buttons
+    document.getElementById('newChildBtn').disabled = !hasSingleSelection;
+    document.getElementById('newParentBtn').disabled = !hasSingleSelection;
+    document.getElementById('saveNoteBtn').disabled = !hasSingleSelection;
+    document.getElementById('deleteNoteBtn').disabled = !hasSingleSelection;
+    document.getElementById('breakLinkBtn').disabled = !hasSingleSelection;
+    
+    // Multi-selection buttons
+    document.getElementById('createLinkBtn').disabled = !hasMultipleSelection;
+    document.getElementById('insertNoteBtn').disabled = !hasMultipleSelection;
 }
 
 // Initialize the application

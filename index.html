@@ -37,9 +37,15 @@
     </div>
     
     <div class="main-content">
-        <div id="graph-container"></div>
-        <div id="editor-container">
-            <div id="editor"></div>
+        <div class="tabs">
+            <button class="tab-button active" data-tab="graph">Graph</button>
+            <button class="tab-button" data-tab="editor">Editor</button>
+        </div>
+        <div class="tab-content">
+            <div id="graph-container" class="tab-pane active"></div>
+            <div id="editor-container" class="tab-pane">
+                <div id="editor"></div>
+            </div>
         </div>
     </div>
 
